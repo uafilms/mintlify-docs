@@ -1,0 +1,37 @@
+---
+title: 'Introduction'
+description: 'How to work with UAFilms API'
+---
+
+<Note>
+  Base API URL: **https://bfilms.aartzz.pp.ua**
+</Note>
+
+<Warning>
+pls cache parser responses, or angry admin will ban your token
+</Warning>
+
+## Authorization
+
+You need API key to parse streams. To get it, go to telegram bot [@films_aartzz_bot](https://t.me/films_aartzz_bot)
+
+
+### Transferring the key
+
+We have several ways to pass the key:
+
+**А: header `x-api-key`.**
+
+```http
+GET /api/home HTTP/1.1
+Host: bfilms.aartzz.pp.ua
+x-api-key: YOUR_SECRET_KEY
+
+```
+
+**B: GET-parameter**
+
+```http
+GET /api/home?token=0.xxxxxxx.xxxxxxx
+
+```

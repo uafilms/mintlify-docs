@@ -1,33 +1,36 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'Вступ'
+description: 'Як працювати з UAFilms API'
 ---
 
 <Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
+  Базова URL адреса API: **https://bfilms.aartzz.pp.ua**
 </Note>
 
-## Welcome
+<Warning>
+кешуйте відповіді з парсингу, ато прийде злий адмін і забанить ваш токен
+</Warning>
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+## Авторизація
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+Щоб парсити стріми, вам буде треба API-ключ. Щоб його отримати, перейдіть у телеграм-бота [@films_aartzz_bot](https://t.me/films_aartzz_bot)
 
-## Authentication
+### Передача ключа
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Є декілька способів передати ключ:
 
-```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+**Варіант А: заголовок `x-api-key`.**
+
+```http
+GET /api/home HTTP/1.1
+Host: bfilms.aartzz.pp.ua
+x-api-key: YOUR_SECRET_KEY
+
+```
+
+**Варіант Б: GET-параметр**
+
+```http
+GET /api/home?token=0.xxxxxxx.xxxxxxx
+
 ```

@@ -1,94 +1,115 @@
 {
-  "openapi": "3.1.0",
+  "openapi": "3.0.3",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
-    "license": {
-      "name": "MIT"
-    },
+    "title": "UAFilms API",
+    "description": "API для агрегації українського контенту. Розділяє метадані (/details) та пошук джерел (/get).",
     "version": "1.0.0"
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
+      "url": "https://bfilms.aartzz.pp.ua",
+      "description": "Production Server"
     }
   ],
   "paths": {
-    "/plants": {
+    "/api/home": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
+        "summary": "Головна сторінка",
+        "description": "Повертає всі категорії контенту: тренди, рекомендації, українське, мультфільми, аніме.",
+        "operationId": "getHome",
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "Успішна відповідь",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
+                "schema": { "$ref": "#/components/schemas/HomeResponse" }
               }
             }
           }
         }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          },
-          "required": true
-        },
+      }
+    },
+    "/api/details": {
+      "get": {
+        "summary": "Метадані (Details)",
+        "description": "Отримує статичну інформацію про фільм/серіал (опис, рейтинги, жанри).",
+        "operationId": "getDetails",
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
+        ],
         "responses": {
           "200": {
-            "description": "plant response",
+            "description": "Метадані контенту",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
-                }
+                "schema": { "$ref": "#/components/schemas/MovieDetails" }
               }
             }
-          },
-          "400": {
-            "description": "unexpected error",
+          }
+        }
+      }
+    },
+    "/api/get": {
+      "get": {
+        "summary": "Джерела (Streams SSE)",
+        "description": "Повертає доступні джерела відео. Може працювати як SSE потік або звичайний запит.",
+        "operationId": "getStreams",
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } },
+          { "name": "token", "in": "query", "required": false, "schema": { "type": "string" }, "description": "API Key" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Потік подій з джерелами",
+            "content": {
+              "text/event-stream": {
+                "schema": { "$ref": "#/components/schemas/StreamEvent" }
+              },
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StreamEvent" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "summary": "Пошук",
+        "operationId": "search",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Результати пошуку",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SearchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/comments": {
+      "get": {
+        "summary": "Коментарі",
+        "operationId": "getComments",
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список коментарів",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Comment" }
                 }
               }
             }
@@ -96,57 +117,25 @@
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
+    "/api/torrents": {
+      "get": {
+        "summary": "Торренти",
+        "operationId": "getTorrents",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
+          { "name": "query", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "token", "in": "query", "required": false, "schema": { "type": "string" }, "description": "API Key" }
         ],
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
+          "200": {
+            "description": "Список торентів",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Torrent" }
                 }
               }
             }
-          }
-        }
-      }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
-      "post": {
-        "description": "Information about a new plant added to the store",
-        "requestBody": {
-          "description": "Plant added to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
           }
         }
       }
@@ -154,63 +143,87 @@
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "MovieShort": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
-          },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
-          }
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "poster_path": { "type": "string" },
+          "vote_average": { "type": "number" },
+          "release_date": { "type": "string" }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
+      "MovieDetails": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "imdb_id": { "type": "string" },
+          "title": { "type": "string" },
+          "overview": { "type": "string" },
+          "genres": { 
+            "type": "array", 
+            "items": { "type": "object", "properties": { "id": { "type": "integer" }, "name": { "type": "string" } } } 
           },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
+          "poster_path": { "type": "string" },
+          "backdrop_path": { "type": "string" },
+          "imdb_rating": { "type": "number" }
+        }
+      },
+      "StreamEvent": {
+        "type": "object",
+        "properties": {
+          "sources": { 
+            "type": "array", 
+            "items": { 
+              "type": "object",
+              "properties": {
+                "provider": { "type": "string" },
+                "quality": { "type": "string" },
+                "link": { "type": "string" },
+                "audio": { "type": "string" }
               }
-            }
-          }
-        ]
-      },
-      "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "message": {
-            "type": "string"
+            } 
           }
         }
-      }
-    },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+      },
+      "HomeResponse": {
+        "type": "object",
+        "properties": {
+          "trending": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+          "recommended": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+          "ukrainian": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+          "cartoons": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+          "anime": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "results": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+          "total_pages": { "type": "integer" },
+          "total_results": { "type": "integer" }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "author": { "type": "object", "properties": { "name": { "type": "string" }, "avatar": { "type": "string" } } },
+          "text": { "type": "string" },
+          "rating": { "type": "integer" },
+          "replies": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } }
+        }
+      },
+      "Torrent": {
+        "type": "object",
+        "properties": {
+          "Tracker": { "type": "string" },
+          "Title": { "type": "string" },
+          "Size": { "type": "number" },
+          "Seeders": { "type": "integer" },
+          "MagnetUri": { "type": "string" }
+        }
       }
     }
   }

@@ -1,122 +1,122 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "name": "UAFilms",
   "theme": "mint",
-  "name": "Mint Starter Kit",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#aac7ff",
+    "light": "#aac7ff",
+    "dark": "#aac7ff"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "api": {
+    "openapi": {
+       "source": "/api-reference/openapi.json"
+    },
+    "playground": {
+      "display": "interactive",
+      "proxy": false
+    },
+    "mdx": {
+      "server": "https://bfilms.aartzz.pp.ua"
+    }
+  },
   "navigation": {
-    "tabs": [
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Main Page",
+          "href": "https://films.aartzz.pp.ua",
+          "icon": "file"
+        },
+        {
+          "anchor": "Telegram Channel",
+          "href": "https://t.me/uafilms_official",
+          "icon": "telegram"
+        },
+        {
+          "anchor": "Telegram Chat",
+          "href": "https://t.me/+ULtfPy4__OpmM2Uy",
+          "icon": "telegram"
+        }
+      ]
+    },
+    "languages": [
       {
-        "tab": "Guides",
-        "groups": [
+        "language": "uk",
+        "tabs": [
           {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
+            "tab": "Документація",
+            "groups": [
+              {
+                "group": "Початок роботи",
+                "pages": [
+                  "index",
+                  "api-reference/introduction"
+                ]
+              }
             ]
           },
           {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+            "tab": "API",
+            "groups": [
+              {
+                "group": "Методи",
+                "pages": [
+                  "api-reference/endpoint/home",
+                  "api-reference/endpoint/search",
+                  "api-reference/endpoint/details",
+                  "api-reference/endpoint/get",
+                  "api-reference/endpoint/torrents",
+                  "api-reference/endpoint/comments"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
-        "groups": [
+        "language": "en",
+        "tabs": [
           {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Getting Started",
+                "pages": [
+                  "en/index",
+                  "en/api-reference/introduction"
+                ]
+              }
             ]
           },
           {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+            "tab": "API",
+            "groups": [
+              {
+                "group": "Methods",
+                "pages": [
+                  "en/api-reference/endpoint/home",
+                  "en/api-reference/endpoint/search",
+                  "en/api-reference/endpoint/details",
+                  "en/api-reference/endpoint/get",
+                  "en/api-reference/endpoint/torrents",
+                  "en/api-reference/endpoint/comments"
+                ]
+              }
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "telegram": "https://t.me/uafilms_official",
+      "github": "https://github.com/uafilms"
     }
   }
 }
