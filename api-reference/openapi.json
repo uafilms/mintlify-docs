@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "UAFilms API",
-    "description": "API для агрегації українського контенту. Розділяє метадані (/details) та пошук джерел (/get).",
-    "version": "1.0.0"
+    "description": "API для агрегації українського контенту. Підтримує SSE для динамічного завантаження джерел.",
+    "version": "1.1.4"
   },
   "servers": [
     {
@@ -11,138 +11,23 @@
       "description": "Production Server"
     }
   ],
-  "paths": {
-    "/api/home": {
-      "get": {
-        "summary": "Головна сторінка",
-        "description": "Повертає всі категорії контенту: тренди, рекомендації, українське, мультфільми, аніме.",
-        "operationId": "getHome",
-        "responses": {
-          "200": {
-            "description": "Успішна відповідь",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HomeResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/details": {
-      "get": {
-        "summary": "Метадані (Details)",
-        "description": "Отримує статичну інформацію про фільм/серіал (опис, рейтинги, жанри).",
-        "operationId": "getDetails",
-        "parameters": [
-          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Метадані контенту",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MovieDetails" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/get": {
-      "get": {
-        "summary": "Джерела (Streams SSE)",
-        "description": "Повертає доступні джерела відео. Може працювати як SSE потік або звичайний запит.",
-        "operationId": "getStreams",
-        "parameters": [
-          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } },
-          { "name": "token", "in": "query", "required": false, "schema": { "type": "string" }, "description": "API Key" }
-        ],
-        "responses": {
-          "200": {
-            "description": "Потік подій з джерелами",
-            "content": {
-              "text/event-stream": {
-                "schema": { "$ref": "#/components/schemas/StreamEvent" }
-              },
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StreamEvent" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/search": {
-      "get": {
-        "summary": "Пошук",
-        "operationId": "search",
-        "parameters": [
-          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Результати пошуку",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/SearchResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/comments": {
-      "get": {
-        "summary": "Коментарі",
-        "operationId": "getComments",
-        "parameters": [
-          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Список коментарів",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Comment" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/torrents": {
-      "get": {
-        "summary": "Торренти",
-        "operationId": "getTorrents",
-        "parameters": [
-          { "name": "query", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "token", "in": "query", "required": false, "schema": { "type": "string" }, "description": "API Key" }
-        ],
-        "responses": {
-          "200": {
-            "description": "Список торентів",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Torrent" }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
   "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API Key для авторизації"
+      }
+    },
     "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "CAPTCHA token missing" },
+          "details": { "type": "array", "items": { "type": "string" }, "nullable": true }
+        }
+      },
       "MovieShort": {
         "type": "object",
         "properties": {
@@ -155,62 +40,103 @@
       },
       "MovieDetails": {
         "type": "object",
+        "description": "Базові метадані з TMDB",
         "properties": {
           "id": { "type": "string" },
-          "imdb_id": { "type": "string" },
+          "imdb_id": { "type": "string", "nullable": true },
+          "type": { "type": "string", "enum": ["movie", "tv"] },
           "title": { "type": "string" },
+          "original_title": { "type": "string" },
+          "year": { "type": "string" },
           "overview": { "type": "string" },
-          "genres": { 
-            "type": "array", 
-            "items": { "type": "object", "properties": { "id": { "type": "integer" }, "name": { "type": "string" } } } 
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" }
+              }
+            }
           },
           "poster_path": { "type": "string" },
           "backdrop_path": { "type": "string" },
-          "imdb_rating": { "type": "number" }
+          "imdb_rating": { "type": "number", "nullable": true }
         }
       },
-      "StreamEvent": {
+      "MovieFull": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MovieDetails" },
+          {
+            "type": "object",
+            "properties": {
+              "sources": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Source" }
+              },
+              "seasons": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Season" }
+              }
+            }
+          }
+        ]
+      },
+      "Season": {
         "type": "object",
         "properties": {
-          "sources": { 
-            "type": "array", 
-            "items": { 
+          "number": { "type": "integer" },
+          "episodes": {
+            "type": "array",
+            "items": {
               "type": "object",
               "properties": {
-                "provider": { "type": "string" },
-                "quality": { "type": "string" },
-                "link": { "type": "string" },
-                "audio": { "type": "string" }
+                "season": { "type": "integer" },
+                "episode": { "type": "integer" },
+                "title": { "type": "string" },
+                "poster": { "type": "string", "nullable": true },
+                "sources": { "type": "array", "items": { "$ref": "#/components/schemas/Source" } }
               }
-            } 
+            }
           }
         }
       },
-      "HomeResponse": {
+      "Source": {
         "type": "object",
         "properties": {
-          "trending": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-          "recommended": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-          "ukrainian": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-          "cartoons": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-          "anime": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } }
-        }
-      },
-      "SearchResponse": {
-        "type": "object",
-        "properties": {
-          "page": { "type": "integer" },
-          "results": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-          "total_pages": { "type": "integer" },
-          "total_results": { "type": "integer" }
+          "provider": { "type": "string" },
+          "dub": { "type": "string" },
+          "quality": { "type": "string" },
+          "url": { "type": "string" },
+          "type": { "type": "string" },
+          "subtitles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "lang": { "type": "string" },
+                "url": { "type": "string" }
+              }
+            }
+          },
+          "poster": { "type": "string", "nullable": true }
         }
       },
       "Comment": {
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "author": { "type": "object", "properties": { "name": { "type": "string" }, "avatar": { "type": "string" } } },
+          "author": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "avatar": { "type": "string" },
+              "group": { "type": "string" }
+            }
+          },
           "text": { "type": "string" },
+          "date": { "type": "string" },
           "rating": { "type": "integer" },
           "replies": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } }
         }
@@ -219,10 +145,139 @@
         "type": "object",
         "properties": {
           "Tracker": { "type": "string" },
+          "TrackerId": { "type": "string" },
           "Title": { "type": "string" },
-          "Size": { "type": "number" },
+          "Size": { "type": "integer" },
           "Seeders": { "type": "integer" },
-          "MagnetUri": { "type": "string" }
+          "MagnetUri": { "type": "string" },
+          "Guid": { "type": "string" },
+          "PublishDate": { "type": "string", "format": "date-time" },
+          "MediaInfo": { "type": "object" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/home": {
+      "get": {
+        "summary": "Головна сторінка",
+        "parameters": [
+          { "name": "adult", "in": "query", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Списки контенту по категоріях",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "trending": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+                    "recommended": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+                    "ukrainian": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+                    "cartoons": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+                    "anime": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Помилка сервера", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "summary": "Пошук контенту",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "adult", "in": "query", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Результати пошуку",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
+                    "total_pages": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Помилка пошуку", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/details": {
+      "get": {
+        "summary": "Метадані контенту (Тільки TMDB)",
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
+        ],
+        "responses": {
+          "200": { 
+            "description": "Метадані без джерел", 
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MovieDetails" } } } 
+          },
+          "404": { "description": "Контент не знайдено", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/get": {
+      "get": {
+        "summary": "Отримання контенту з джерелами",
+        "description": "Повертає метадані та всі доступні посилання. Підтримує SSE для поступового отримання джерел.",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } },
+          { "name": "sse", "in": "query", "description": "Увімкнути Server-Sent Events (1 - так, 0 - ні)", "schema": { "type": "string", "enum": ["0", "1"], "default": "0" } },
+          { "name": "eng", "in": "query", "description": "Мовний режим (0: UA, 1: UA+ENG, 2: ENG)", "schema": { "type": "integer", "enum": [0, 1, 2], "default": 0 } }
+        ],
+        "responses": {
+          "200": { 
+            "description": "JSON об'єкт (при sse=0) або текстовий потік (при sse=1)", 
+            "content": { 
+              "application/json": { "schema": { "$ref": "#/components/schemas/MovieFull" } },
+              "text/event-stream": { "schema": { "type": "string" } }
+            } 
+          },
+          "403": { "description": "Доступ заборонено (Капча/Ключ)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Контент не знайдено" },
+          "500": { "description": "Помилка конфігурації сервера" }
+        }
+      }
+    },
+    "/api/torrents": {
+      "get": {
+        "summary": "Пошук торрентів",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "tmdbId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
+        ],
+        "responses": {
+          "200": { "description": "Список торрентів", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Torrent" } } } } },
+          "403": { "description": "Access Denied" }
+        }
+      }
+    },
+    "/api/comments": {
+      "get": {
+        "summary": "Коментарі з UaKino",
+        "parameters": [
+          { "name": "imdb_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "Дерево коментарів", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } } } } },
+          "404": { "description": "Коментарі не знайдено" }
         }
       }
     }
