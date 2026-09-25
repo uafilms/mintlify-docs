@@ -1,37 +1,86 @@
 ---
-title: 'Introduction'
-description: 'How to work with UAFilms API'
+title: 'Introduction & Authentication'
+description: 'Getting started with UAFilms API, key generation, and rate limits'
 ---
 
 <Note>
-  Base API URL: **https://bfilms.aartzz.pp.ua**
+  Base server URL: **`https://films.aartzz.pp.ua`**
 </Note>
 
+## Generating an API Key
+
+To use the API and bypass guest rate limits, generate a personal API key:
+
+1. Open the web app at **[films.aartzz.pp.ua](https://films.aartzz.pp.ua)**.
+2. Sign up or log in (supported trusted providers: Gmail, Outlook, Proton, Ukr.net, iCloud).
+3. Navigate to **Settings** ➔ **Account** ➔ **API** (or directly [films.aartzz.pp.ua/dashboard](https://films.aartzz.pp.ua/dashboard)).
+4. Click **"Create Key"**, assign a descriptive name (e.g. `My Production Bot`), and copy your generated key (`uaf_live_...`).
+
 <Warning>
-pls cache parser responses, or angry admin will ban your token
+  The full secret key is only displayed **once** upon generation. Store it securely.
 </Warning>
 
-## Authorization
+---
 
-You need API key to parse streams. To get it, go to telegram bot [@films_aartzz_bot](https://t.me/films_aartzz_bot)
+## Authentication Methods
 
+Authenticate your API requests using any of the following methods:
 
-### Transferring the key
+### 1. HTTP Header `x-api-key` (Recommended)
 
-We have several ways to pass the key:
-
-**А: header `x-api-key`.**
-
-```http
-GET /api/home HTTP/1.1
-Host: bfilms.aartzz.pp.ua
-x-api-key: YOUR_SECRET_KEY
-
+```bash
+curl -H "x-api-key: uaf_live_YOUR_KEY" \
+  https://films.aartzz.pp.ua/v1/movies/1423191
 ```
 
-**B: GET-parameter**
+### 2. Header `Authorization: Bearer`
 
-```http
-GET /api/home?token=0.xxxxxxx.xxxxxxx
+```bash
+curl -H "Authorization: Bearer uaf_live_YOUR_KEY" \
+  https://films.aartzz.pp.ua/v1/movies/1423191
+```
 
+### 3. Query Parameter (convenient for media players)
+
+```bash
+curl "https://films.aartzz.pp.ua/v1/movies/1423191?api_key=uaf_live_YOUR_KEY"
+```
+
+---
+
+## Security & Rate Limits
+
+The UAFilms server employs tiered security to ensure high service availability:
+
+- **Authenticated Users (with API key):**
+  - Completely exempt from Cloudflare Turnstile CAPTCHA checks.
+  - Full analytics tracking (request volume, average latency, and recent 50 logs).
+  - High concurrency and priority queue for source extraction.
+
+- **Unauthenticated / Guest Requests:**
+  - Standard catalog routes (`/api/home`, `/api/search`, `/api/details`) have soft rate limits.
+  - Streaming resolution endpoints (`/v1/movies/*`, `/v1/tv/*`) are strictly rate-limited to **10 requests per minute** per client IP.
+  - When Cloudflare Turnstile protection is active, guest requests must include a valid token in the `cf-turnstile-response` header or `turnstile_token` query parameter.
+
+---
+
+## Real-time OMSS Streaming (Server-Sent Events)
+
+When resolving media sources across multiple providers, some providers respond in 300ms while others may take 2-3 seconds. The OMSS endpoints support **SSE** so players can start playback immediately:
+
+```javascript
+// Connect to real-time provider stream via EventSource
+const eventSource = new EventSource(
+  'https://films.aartzz.pp.ua/v1/movies/1423191?sse=1&api_key=uaf_live_YOUR_KEY'
+);
+
+eventSource.addEventListener('provider', (event) => {
+  const data = JSON.parse(event.data);
+  console.log(`Received sources from ${data.name}:`, data.sources);
+});
+
+eventSource.addEventListener('complete', (event) => {
+  console.log('Search completed across all providers.');
+  eventSource.close();
+});
 ```

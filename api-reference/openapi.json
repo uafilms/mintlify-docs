@@ -2,13 +2,17 @@
   "openapi": "3.0.3",
   "info": {
     "title": "UAFilms API",
-    "description": "API для агрегації українського контенту. Підтримує SSE для динамічного завантаження джерел.",
-    "version": "1.1.4"
+    "description": "API агрегатора українського медіа-контенту та OMSS (Open Media Streaming Specification) стрімінговий сервер з підтримкою HLS проксі, динамічного Server-Sent Events (SSE) парсингу, системи акаунтів та персональних API-ключів.",
+    "version": "1.2.0"
   },
   "servers": [
     {
-      "url": "https://bfilms.aartzz.pp.ua",
+      "url": "https://films.aartzz.pp.ua",
       "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
     }
   ],
   "components": {
@@ -17,142 +21,155 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key",
-        "description": "API Key для авторизації"
+        "description": "API-ключ користувача (uaf_live_...)"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT-токен користувача або API-ключ (Bearer uaf_live_...)"
       }
     },
     "schemas": {
       "Error": {
         "type": "object",
         "properties": {
-          "error": { "type": "string", "example": "CAPTCHA token missing" },
-          "details": { "type": "array", "items": { "type": "string" }, "nullable": true }
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "example": "TURNSTILE_VERIFICATION_FAILED" },
+              "message": { "type": "string", "example": "Помилка перевірки Cloudflare Turnstile або перевищено ліміт запитів." },
+              "details": { "type": "object", "nullable": true }
+            }
+          },
+          "traceId": { "type": "string", "example": "c08faa4f-c7e4-4c08-9346-cd988ca94afe" }
         }
       },
       "MovieShort": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "title": { "type": "string" },
-          "poster_path": { "type": "string" },
-          "vote_average": { "type": "number" },
-          "release_date": { "type": "string" }
+          "id": { "type": "integer", "example": 1423191 },
+          "title": { "type": "string", "example": "Resident Evil: Оселя Зла" },
+          "original_title": { "type": "string", "example": "Resident Evil" },
+          "poster_path": { "type": "string", "nullable": true, "example": "/3icyRAqgakNcQn6aDVz9libFmBA.jpg" },
+          "backdrop_path": { "type": "string", "nullable": true, "example": "/3icyRAqgakNcQn6aDVz9libFmBA.jpg" },
+          "vote_average": { "type": "number", "example": 7.4 },
+          "release_date": { "type": "string", "example": "2026-03-12" },
+          "media_type": { "type": "string", "enum": ["movie", "tv"], "example": "movie" },
+          "adult": { "type": "boolean", "example": false }
         }
       },
       "MovieDetails": {
         "type": "object",
-        "description": "Базові метадані з TMDB",
         "properties": {
-          "id": { "type": "string" },
-          "imdb_id": { "type": "string", "nullable": true },
-          "type": { "type": "string", "enum": ["movie", "tv"] },
-          "title": { "type": "string" },
-          "original_title": { "type": "string" },
-          "year": { "type": "string" },
-          "overview": { "type": "string" },
+          "id": { "type": "string", "example": "1423191" },
+          "imdbId": { "type": "string", "nullable": true, "example": "tt1234567" },
+          "type": { "type": "string", "enum": ["movie", "tv"], "example": "movie" },
+          "title": { "type": "string", "example": "Resident Evil: Оселя Зла" },
+          "originalTitle": { "type": "string", "example": "Resident Evil" },
+          "year": { "type": "integer", "example": 2026 },
+          "overview": { "type": "string", "example": "Кур'єр отримує завдання доставити посилку..." },
           "genres": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "type": "integer" },
-                "name": { "type": "string" }
-              }
-            }
+            "items": { "type": "string" },
+            "example": ["Бойовик", "Жахи", "Фантастика"]
           },
-          "poster_path": { "type": "string" },
-          "backdrop_path": { "type": "string" },
-          "imdb_rating": { "type": "number", "nullable": true }
+          "posterUrl": { "type": "string", "nullable": true, "example": "https://image.tmdb.org/t/p/w500/3icyRAqgakNcQn6aDVz9libFmBA.jpg" },
+          "backdropUrl": { "type": "string", "nullable": true, "example": "https://image.tmdb.org/t/p/original/3icyRAqgakNcQn6aDVz9libFmBA.jpg" },
+          "rating": { "type": "number", "example": 7.4 },
+          "totalSeasons": { "type": "integer", "nullable": true, "example": 1 }
         }
       },
-      "MovieFull": {
-        "allOf": [
-          { "$ref": "#/components/schemas/MovieDetails" },
-          {
-            "type": "object",
-            "properties": {
-              "sources": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/Source" }
-              },
-              "seasons": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/Season" }
-              }
-            }
-          }
-        ]
-      },
-      "Season": {
+      "EpisodeDetails": {
         "type": "object",
         "properties": {
-          "number": { "type": "integer" },
+          "episodeNumber": { "type": "integer", "example": 1 },
+          "seasonNumber": { "type": "integer", "example": 1 },
+          "title": { "type": "string", "example": "Пілотна серія" },
+          "overview": { "type": "string", "example": "Початок історії..." },
+          "stillUrl": { "type": "string", "nullable": true, "example": "https://image.tmdb.org/t/p/w300/xyz.jpg" },
+          "airDate": { "type": "string", "example": "2026-01-15" }
+        }
+      },
+      "SeasonDetails": {
+        "type": "object",
+        "properties": {
+          "seasonNumber": { "type": "integer", "example": 1 },
+          "title": { "type": "string", "example": "Сезон 1" },
           "episodes": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "season": { "type": "integer" },
-                "episode": { "type": "integer" },
-                "title": { "type": "string" },
-                "poster": { "type": "string", "nullable": true },
-                "sources": { "type": "array", "items": { "$ref": "#/components/schemas/Source" } }
-              }
+            "items": { "$ref": "#/components/schemas/EpisodeDetails" }
+          }
+        }
+      },
+      "OmssStreamSource": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "example": "https://films.aartzz.pp.ua/master.m3u8?url=https%3A%2F%2Fashdi.vip%2F..." },
+          "quality": { "type": "string", "example": "auto" },
+          "format": { "type": "string", "example": "hls" },
+          "audio": {
+            "type": "object",
+            "properties": {
+              "language": { "type": "string", "example": "uk" },
+              "label": { "type": "string", "example": "Uaflix (Дубляж)" },
+              "type": { "type": "string", "example": "dub" }
+            }
+          },
+          "provider": { "type": "string", "example": "ashdi" },
+          "providerName": { "type": "string", "example": "Ashdi" }
+        }
+      },
+      "OmssSubtitle": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "example": "Українські" },
+          "language": { "type": "string", "example": "uk" },
+          "url": { "type": "string", "example": "https://films.aartzz.pp.ua/subs.m3u8?cdn=ashdi&id=277732&lang=ua" }
+        }
+      },
+      "OmssResolutionResult": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "1423191" },
+          "type": { "type": "string", "example": "movie" },
+          "title": { "type": "string", "example": "Resident Evil: Оселя Зла" },
+          "year": { "type": "integer", "example": 2026 },
+          "sources": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OmssStreamSource" }
+          },
+          "subtitles": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OmssSubtitle" }
+          },
+          "diagnostics": {
+            "type": "object",
+            "properties": {
+              "duration": { "type": "number", "example": 482 },
+              "providersAttempted": { "type": "integer", "example": 5 },
+              "providersSucceeded": { "type": "integer", "example": 3 }
             }
           }
         }
       },
-      "Source": {
+      "MediaSegment": {
         "type": "object",
         "properties": {
-          "provider": { "type": "string" },
-          "dub": { "type": "string" },
-          "quality": { "type": "string" },
-          "url": { "type": "string" },
-          "type": { "type": "string" },
-          "subtitles": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": { "type": "string" },
-                "lang": { "type": "string" },
-                "url": { "type": "string" }
-              }
-            }
-          },
-          "poster": { "type": "string", "nullable": true }
+          "type": { "type": "string", "enum": ["intro", "credits", "recap", "preview"], "example": "intro" },
+          "start": { "type": "number", "example": 90.5 },
+          "end": { "type": "number", "example": 175.2 },
+          "label": { "type": "string", "example": "Заставка" },
+          "source": { "type": "string", "example": "theintrodb" }
         }
       },
       "Comment": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "author": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string" },
-              "avatar": { "type": "string" },
-              "group": { "type": "string" }
-            }
-          },
-          "text": { "type": "string" },
-          "date": { "type": "string" },
-          "rating": { "type": "integer" },
-          "replies": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } }
-        }
-      },
-      "Torrent": {
-        "type": "object",
-        "properties": {
-          "Tracker": { "type": "string" },
-          "TrackerId": { "type": "string" },
-          "Title": { "type": "string" },
-          "Size": { "type": "integer" },
-          "Seeders": { "type": "integer" },
-          "MagnetUri": { "type": "string" },
-          "Guid": { "type": "string" },
-          "PublishDate": { "type": "string", "format": "date-time" },
-          "MediaInfo": { "type": "object" }
+          "author": { "type": "string", "example": "Kinoman" },
+          "date": { "type": "string", "example": "24 вересня 2026" },
+          "text": { "type": "string", "example": "Дуже класний фільм, озвучка топ!" },
+          "avatar": { "type": "string", "nullable": true, "example": "https://uakino.best/uploads/fotos/123.jpg" }
         }
       }
     }
@@ -160,13 +177,20 @@
   "paths": {
     "/api/home": {
       "get": {
-        "summary": "Головна сторінка",
+        "summary": "Головна сторінка каталогу",
+        "description": "Повертає підбірки популярного контенту за категоріями: тренди, рекомендації, українське кіно, мультфільми та аніме.",
         "parameters": [
-          { "name": "adult", "in": "query", "schema": { "type": "boolean", "default": false } }
+          {
+            "name": "adult",
+            "in": "query",
+            "description": "Включати контент для дорослих (18+)",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Списки контенту по категоріях",
+            "description": "Категоризовані списки медіа",
             "content": {
               "application/json": {
                 "schema": {
@@ -181,18 +205,36 @@
                 }
               }
             }
-          },
-          "500": { "description": "Помилка сервера", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          }
         }
       }
     },
     "/api/search": {
       "get": {
-        "summary": "Пошук контенту",
+        "summary": "Пошук медіа",
+        "description": "Здійснює пошук фільмів та серіалів за ключовими словами у TMDB каталозі.",
         "parameters": [
-          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "adult", "in": "query", "schema": { "type": "boolean", "default": false } }
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Пошуковий запит (назва фільму/серіалу українською або англійською)",
+            "required": true,
+            "schema": { "type": "string", "example": "Дюна" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Номер сторінки пагінації",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "adult",
+            "in": "query",
+            "description": "Включати результати 18+",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          }
         ],
         "responses": {
           "200": {
@@ -203,81 +245,552 @@
                   "type": "object",
                   "properties": {
                     "results": { "type": "array", "items": { "$ref": "#/components/schemas/MovieShort" } },
-                    "total_pages": { "type": "integer" }
+                    "page": { "type": "integer", "example": 1 },
+                    "total_pages": { "type": "integer", "example": 3 },
+                    "total_results": { "type": "integer", "example": 54 }
                   }
                 }
               }
             }
-          },
-          "404": { "description": "Помилка пошуку", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          }
         }
       }
     },
     "/api/details": {
       "get": {
-        "summary": "Метадані контенту (Тільки TMDB)",
+        "summary": "Деталі медіа (TMDB)",
+        "description": "Повертає вичерпні метадані про фільм або серіал за його TMDB або IMDB ідентифікатором.",
         "parameters": [
-          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
+          {
+            "name": "id",
+            "in": "query",
+            "description": "TMDB ID або IMDB ID (tt...)",
+            "required": true,
+            "schema": { "type": "string", "example": "1423191" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Тип медіа (movie або tv)",
+            "required": false,
+            "schema": { "type": "string", "enum": ["movie", "tv"], "default": "movie" }
+          }
         ],
         "responses": {
-          "200": { 
-            "description": "Метадані без джерел", 
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MovieDetails" } } } 
+          "200": {
+            "description": "Метадані медіа",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MovieDetails" }
+              }
+            }
           },
-          "404": { "description": "Контент не знайдено", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "404": {
+            "description": "Медіа не знайдено",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
-    "/api/get": {
+    "/api/season": {
       "get": {
-        "summary": "Отримання контенту з джерелами",
-        "description": "Повертає метадані та всі доступні посилання. Підтримує SSE для поступового отримання джерел.",
-        "security": [{ "ApiKeyAuth": [] }],
+        "summary": "Епізоди сезону серіалу",
+        "description": "Повертає список серій, назви, описи та дати виходу для конкретного сезону серіалу.",
         "parameters": [
-          { "name": "id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } },
-          { "name": "sse", "in": "query", "description": "Увімкнути Server-Sent Events (1 - так, 0 - ні)", "schema": { "type": "string", "enum": ["0", "1"], "default": "0" } },
-          { "name": "eng", "in": "query", "description": "Мовний режим (0: UA, 1: UA+ENG, 2: ENG)", "schema": { "type": "integer", "enum": [0, 1, 2], "default": 0 } }
+          {
+            "name": "id",
+            "in": "query",
+            "description": "TMDB ID серіалу",
+            "required": true,
+            "schema": { "type": "string", "example": "284445" }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "description": "Номер сезону",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          }
         ],
         "responses": {
-          "200": { 
-            "description": "JSON об'єкт (при sse=0) або текстовий потік (при sse=1)", 
-            "content": { 
-              "application/json": { "schema": { "$ref": "#/components/schemas/MovieFull" } },
-              "text/event-stream": { "schema": { "type": "string" } }
-            } 
-          },
-          "403": { "description": "Доступ заборонено (Капча/Ключ)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "description": "Контент не знайдено" },
-          "500": { "description": "Помилка конфігурації сервера" }
+          "200": {
+            "description": "Деталі сезону та серій",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SeasonDetails" }
+              }
+            }
+          }
         }
       }
     },
-    "/api/torrents": {
+    "/api/batch-meta": {
+      "post": {
+        "summary": "Пакетне отримання метаданих",
+        "description": "Дозволяє одним швидким запитом отримати назви та постери для списку медіа-ідентифікаторів (корисно для бібліотек, обраного, історії перегляду).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "example": ["movie_1423191", "tv_284445_s1_e1", "1315772"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Словник метаданих по ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "title": { "type": "string" },
+                      "posterUrl": { "type": "string", "nullable": true },
+                      "year": { "type": "integer", "nullable": true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/segments": {
       "get": {
-        "summary": "Пошук торрентів",
-        "security": [{ "ApiKeyAuth": [] }],
+        "summary": "Сегменти пропуску (Intro/Outro/Recap)",
+        "description": "Отримує часові мітки заставок та титрів для автоматичного або ручного пропуску з баз AniSkip та TheIntroDB.",
         "parameters": [
-          { "name": "tmdbId", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["movie", "tv"] } }
+          {
+            "name": "id",
+            "in": "query",
+            "description": "TMDB ID або IMDB ID",
+            "required": false,
+            "schema": { "type": "string", "example": "284445" }
+          },
+          {
+            "name": "imdb_id",
+            "in": "query",
+            "description": "IMDB ID (tt...)",
+            "required": false,
+            "schema": { "type": "string", "example": "tt1234567" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "movie або tv",
+            "required": false,
+            "schema": { "type": "string", "enum": ["movie", "tv"], "default": "tv" }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "description": "Номер сезону",
+            "required": false,
+            "schema": { "type": "integer", "example": 1 }
+          },
+          {
+            "name": "episode",
+            "in": "query",
+            "description": "Номер серії",
+            "required": false,
+            "schema": { "type": "integer", "example": 1 }
+          },
+          {
+            "name": "duration_ms",
+            "in": "query",
+            "description": "Тривалість відео в мілісекундах для точної синхронізації",
+            "required": false,
+            "schema": { "type": "number", "example": 1420000 }
+          }
         ],
         "responses": {
-          "200": { "description": "Список торрентів", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Torrent" } } } } },
-          "403": { "description": "Access Denied" }
+          "200": {
+            "description": "Список знайдених сегментів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "segments": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/MediaSegment" }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/comments": {
       "get": {
-        "summary": "Коментарі з UaKino",
+        "summary": "Коментарі глядачів",
+        "description": "Парсинг відгуків та коментарів української аудиторії з сайту Uakino за IMDB ID.",
         "parameters": [
-          { "name": "imdb_id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+          {
+            "name": "imdb_id",
+            "in": "query",
+            "required": true,
+            "description": "IMDB ідентифікатор медіа (tt...)",
+            "schema": { "type": "string", "example": "tt1423191" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Номер сторінки коментарів",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          }
         ],
         "responses": {
-          "200": { "description": "Дерево коментарів", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } } } } },
-          "404": { "description": "Коментарі не знайдено" }
+          "200": {
+            "description": "Список коментарів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Comment" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/movies/{id}": {
+      "get": {
+        "summary": "OMSS: Джерела фільму (Парсинг стрімів)",
+        "description": "Головний стрімінговий метод OMSS. Шукає та парсить відеопотоки через усіх доступних українських провайдерів (Ashdi, Tortuga, UaSerials, UaFlix, KinoUkr, HDVB тощо). Підтримує стрімінг у реальному часі через Server-Sent Events (SSE).",
+        "security": [
+          { "ApiKeyAuth": [] },
+          { "BearerAuth": [] },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "TMDB ID або IMDB ID фільму",
+            "schema": { "type": "string", "example": "1423191" }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "description": "Обмежити пошук конкретним провайдером (ashdi, tortuga, uaserials, kinoukr, uaflix)",
+            "schema": { "type": "string", "example": "ashdi" }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "description": "Платформа клієнта. Значення 'web' автоматично загортає HLS посилання у проксі для обходу CORS і захистів плеєра.",
+            "schema": { "type": "string", "enum": ["web", "android", "ios", "tv"], "default": "web" }
+          },
+          {
+            "name": "sse",
+            "in": "query",
+            "required": false,
+            "description": "Увімкнути Server-Sent Events (1 або 0). При 1 відповіді надходять подіями по мірі виявлення провайдерів.",
+            "schema": { "type": "string", "enum": ["0", "1"], "default": "0" }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "Фільтр студії озвучки (dub) або якості",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "api_key",
+            "in": "query",
+            "required": false,
+            "description": "API-ключ (альтернатива заголовку x-api-key)",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "turnstile_token",
+            "in": "query",
+            "required": false,
+            "description": "Токен Cloudflare Turnstile (обов'язковий лише для неавторизованих користувачів без API-ключа)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Знайдені стріми у форматі OMSS або потік SSE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OmssResolutionResult" }
+              },
+              "text/event-stream": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "401": {
+            "description": "Недійсний API-ключ",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "403": {
+            "description": "Помилка перевірки Cloudflare Turnstile (для неавторизованих запитів)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів для гостей (10 запитів на хвилину)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/v1/tv/{id}/seasons/{season}/episodes/{episode}": {
+      "get": {
+        "summary": "OMSS: Джерела серії серіалу",
+        "description": "Парсинг стрімів конкретної серії серіалу за номером сезону та епізоду.",
+        "security": [
+          { "ApiKeyAuth": [] },
+          { "BearerAuth": [] },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "TMDB ID серіалу",
+            "schema": { "type": "string", "example": "284445" }
+          },
+          {
+            "name": "season",
+            "in": "path",
+            "required": true,
+            "description": "Номер сезону",
+            "schema": { "type": "integer", "example": 1 }
+          },
+          {
+            "name": "episode",
+            "in": "path",
+            "required": true,
+            "description": "Номер серії",
+            "schema": { "type": "integer", "example": 1 }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["web", "android", "ios", "tv"], "default": "web" }
+          },
+          {
+            "name": "sse",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["0", "1"], "default": "0" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Знайдені стріми серії",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OmssResolutionResult" }
+              },
+              "text/event-stream": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/refresh/{id}": {
+      "post": {
+        "summary": "Очищення кешу парсингу",
+        "description": "Скидає закешовані результати пошуку стрімів для конкретного медіа та ініціює повторний живий парсинг. Доступний не частіше ніж раз на 2 години після попереднього парсингу.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "TMDB ID, IMDb ID або responseId",
+            "schema": { "type": "string", "example": "1423191" }
+          },
+          {
+            "name": "api_key",
+            "in": "query",
+            "required": false,
+            "description": "API-ключ (альтернатива заголовку x-api-key)",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "turnstile_token",
+            "in": "query",
+            "required": false,
+            "description": "Токен Cloudflare Turnstile (якщо без API-ключа)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Кеш очищено успішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "OK" },
+                    "message": { "type": "string", "example": "Кеш джерел успішно очищено" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Медіа або ID відповіді не знайдено в кеші",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "429": {
+            "description": "Кулдаун активний (з моменту останнього парсингу пройшло менше 2 годин)",
+            "headers": {
+              "Retry-After": {
+                "description": "Час у секундах до завершення блокування",
+                "schema": { "type": "integer", "example": 3600 }
+              }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/master.m3u8": {
+      "get": {
+        "summary": "HLS Маніфест-проксі",
+        "description": "Проксіює зовнішні HLS плейлисти, автоматично підставляє потрібні заголовки (Referer, Origin, Cookie) для захищених CDN (Ashdi, Tortuga, HDVB) та трансформує посилання на сегменти для браузерного перегляду.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "description": "Цільовий прямий URL плейлиста .m3u8",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "cdn",
+            "in": "query",
+            "required": false,
+            "description": "Ім'я CDN провайдера (ashdi, tortuga, hdvb)",
+            "schema": { "type": "string", "example": "ashdi" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Тип VOD для ледачого резолву (vod або serial)",
+            "schema": { "type": "string", "example": "vod" }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "description": "ID стріму у CDN",
+            "schema": { "type": "string", "example": "277732" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS m3u8 плейлист",
+            "content": {
+              "application/vnd.apple.mpegurl": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subs.m3u8": {
+      "get": {
+        "summary": "HLS Субтитри",
+        "description": "Повертає проксійований плейлист субтитрів у форматі WebVTT / HLS.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "cdn",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "ua" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "M3U8 плейлист субтитрів",
+            "content": {
+              "application/vnd.apple.mpegurl": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "summary": "Конфігурація сервера",
+        "description": "Повертає статус інтеграції Cloudflare Turnstile та публічний siteKey для віджета капчі.",
+        "responses": {
+          "200": {
+            "description": "Публічна конфігурація",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "turnstile": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": { "type": "boolean", "example": true },
+                        "siteKey": { "type": "string", "example": "0x4AAAAAACMfkvofTPM2zEZ8" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

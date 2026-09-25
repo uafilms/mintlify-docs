@@ -1,30 +1,41 @@
 ---
 title: "Home"
-description: "Welcome to the UAFilms API documentation"
+description: "Welcome to the official UAFilms API documentation"
 ---
 
 ## What is UAFilms?
-UAFilms is a movie and series aggregator that combines content from multiple sources (providers) and provides a user-friendly interface for searching and watching.
+
+UAFilms is a high-performance backend aggregator for Ukrainian media content and a streaming server built on top of the [OMSS (Open Media Streaming Specification)](https://github.com/omss-spec/omss-spec).
+
+It unifies popular Ukrainian online streaming platforms and CDNs into a single, blazing-fast, and reliable API for catalog discovery, metadata, and video streaming.
 
 <CardGroup cols={2}>
-  <Card title="Multi-provider" icon="server">
-    Search content simultaneously on Ashdi, Tortuga, HDVB, MoonAnime, and other services.
+  <Card title="OMSS Multi-Provider" icon="server">
+    Concurrent stream searching and extraction across Ashdi, Tortuga, UaSerials, UaFlix, KinoUkr, and other providers.
   </Card>
-  <Card title="Torrents" icon="magnet">
-    Built-in search and parsing for torrent trackers.
+  <Card title="Server-Sent Events (SSE)" icon="bolt">
+    Real-time source resolution stream delivering parsed sources immediately without waiting for slower providers.
   </Card>
-  <Card title="TMDB Integration" icon="film">
-    Detailed information about movies, ratings, and posters via The Movie Database.
+  <Card title="TMDB & Subtitles" icon="film">
+    Complete metadata enrichment via TMDB, Ukrainian posters, synopses, and VTT/M3U8 subtitles.
   </Card>
-  <Card title="Security" icon="shield-check">
-    API protection via Cloudflare Turnstile and an API key system.
+  <Card title="HLS Manifest Proxy" icon="play">
+    Built-in proxy rewriting headers, tokens, and segment playlists for seamless in-browser playback.
+  </Card>
+  <Card title="AniSkip & TheIntroDB" icon="forward">
+    Intelligent detection and skipping of intros, credits, and recap segments.
+  </Card>
+  <Card title="Accounts & API Keys" icon="key">
+    Dedicated developer portal, usage analytics dashboard, and personal API keys.
   </Card>
 </CardGroup>
 
 ## Quickstart
 
-To get started with the API, please review the authorization section.
+1. Register or log in to your account at [films.aartzz.pp.ua](https://films.aartzz.pp.ua).
+2. Go to **Settings** ➔ **Account** ➔ **API** or open the [Developer Dashboard](https://films.aartzz.pp.ua/dashboard).
+3. Generate your personal API key (`uaf_live_...`) and send it in the `x-api-key` header.
 
-<Card title="Authorization and Access" icon="key" href="/en/api-reference/introduction">
-  Learn how to get access to the API.
+<Card title="Authorization & Security Guide" icon="book-open" href="/en/api-reference/introduction">
+  Learn more about passing API keys, Cloudflare Turnstile rules, and rate limits.
 </Card>

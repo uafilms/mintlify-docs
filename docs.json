@@ -14,31 +14,36 @@
   },
   "api": {
     "openapi": {
-       "source": "/api-reference/openapi.json"
+      "source": "/api-reference/openapi.json"
     },
     "playground": {
       "display": "interactive",
       "proxy": false
     },
     "mdx": {
-      "server": "https://bfilms.aartzz.pp.ua"
+      "server": "https://films.aartzz.pp.ua"
     }
   },
   "navigation": {
     "global": {
       "anchors": [
         {
-          "anchor": "Main Page",
+          "anchor": "Онлайн-кінотеатр",
           "href": "https://films.aartzz.pp.ua",
-          "icon": "file"
+          "icon": "film"
         },
         {
-          "anchor": "Telegram Channel",
+          "anchor": "Отримати API-ключ",
+          "href": "https://films.aartzz.pp.ua/dashboard",
+          "icon": "key"
+        },
+        {
+          "anchor": "Telegram Канал",
           "href": "https://t.me/uafilms_official",
           "icon": "telegram"
         },
         {
-          "anchor": "Telegram Chat",
+          "anchor": "Telegram Чат",
           "href": "https://t.me/+ULtfPy4__OpmM2Uy",
           "icon": "telegram"
         }
@@ -64,14 +69,30 @@
             "tab": "API",
             "groups": [
               {
-                "group": "Методи",
+                "group": "Каталог і метадані",
                 "pages": [
                   "api-reference/endpoint/home",
                   "api-reference/endpoint/search",
                   "api-reference/endpoint/details",
-                  "api-reference/endpoint/get",
-                  "api-reference/endpoint/torrents",
+                  "api-reference/endpoint/season",
+                  "api-reference/endpoint/batch-meta",
+                  "api-reference/endpoint/segments",
                   "api-reference/endpoint/comments"
+                ]
+              },
+              {
+                "group": "OMSS Стрімінг",
+                "pages": [
+                  "api-reference/endpoint/omss-movies",
+                  "api-reference/endpoint/omss-tv",
+                  "api-reference/endpoint/omss-refresh"
+                ]
+              },
+              {
+                "group": "HLS Проксі",
+                "pages": [
+                  "api-reference/endpoint/master-m3u8",
+                  "api-reference/endpoint/subtitles"
                 ]
               }
             ]
@@ -97,14 +118,30 @@
             "tab": "API",
             "groups": [
               {
-                "group": "Methods",
+                "group": "Catalog & Metadata",
                 "pages": [
                   "en/api-reference/endpoint/home",
                   "en/api-reference/endpoint/search",
                   "en/api-reference/endpoint/details",
-                  "en/api-reference/endpoint/get",
-                  "en/api-reference/endpoint/torrents",
+                  "en/api-reference/endpoint/season",
+                  "en/api-reference/endpoint/batch-meta",
+                  "en/api-reference/endpoint/segments",
                   "en/api-reference/endpoint/comments"
+                ]
+              },
+              {
+                "group": "OMSS Streaming",
+                "pages": [
+                  "en/api-reference/endpoint/omss-movies",
+                  "en/api-reference/endpoint/omss-tv",
+                  "en/api-reference/endpoint/omss-refresh"
+                ]
+              },
+              {
+                "group": "HLS Proxy",
+                "pages": [
+                  "en/api-reference/endpoint/master-m3u8",
+                  "en/api-reference/endpoint/subtitles"
                 ]
               }
             ]

@@ -1,0 +1,11 @@
+---
+title: "Clear Cache"
+openapi: "POST /v1/refresh/{id}"
+---
+
+Invalidates cached streaming sources for a specific movie or TV show, forcing a fresh live search across providers.
+
+<Note>
+**Cooldown policy:** Cache clearing for a specific media item is only permitted at least **2 hours** after it was last parsed.
+Requesting a refresh before the cooldown expires returns HTTP `429 Too Many Requests` with a `Retry-After` header.
+</Note>
